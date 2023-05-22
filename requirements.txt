@@ -1,3 +1,5 @@
-torch_geometric
--f https://download.pytorch.org/whl/cu117
+-f https://download.pytorch.org/whl/cu118
 torch
+torch_geometric
+matplotlib
+seaborn
