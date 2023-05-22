@@ -4,3 +4,4 @@ torch_geometric
 matplotlib
 seaborn
 tqdm
+osmnx
