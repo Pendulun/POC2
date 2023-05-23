@@ -35,7 +35,7 @@ def edge_list_coo_format_using_scipy(city):
 
 #From https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
 # and https://colab.research.google.com/github/AntonioLonga/PytorchGeometricTutorial/blob/main/Tutorial11/Tutorial11.ipynb
-def train(loader, optimizer, device):
+def train(model, loader, optimizer, device):
     model.train()
     total_loss = 0
     for pos_rw, neg_rw in loader:
@@ -47,7 +47,7 @@ def train(loader, optimizer, device):
     return total_loss / len(loader)
 
 @torch.no_grad()
-def test():
+def test(model:Node2Vec, data):
     model.eval()
     z = model()
     acc = model.test(z[data.train_mask], data.y[data.train_mask],
@@ -75,9 +75,9 @@ if __name__ == "__main__":
     GRAPH_DATA_FOLDER = pathlib.Path("../data/graphml/")
     print(f"Data folder: {GRAPH_DATA_FOLDER}")
     
-    graph_data_files = list(GRAPH_DATA_FOLDER.glob("*/*.graphml"))
+    graph_data_files = GRAPH_DATA_FOLDER.glob("*/*.graphml")
 
-    data_file = graph_data_files[0]
+    data_file = next(graph_data_files)
     city = osmnx.io.load_graphml(data_file)
     print(f"City: {data_file}")
     city_stats = osmnx.stats.basic_stats(city)
@@ -92,15 +92,18 @@ if __name__ == "__main__":
     data.validate(raise_on_error=True)
     print(data.is_directed())
 
+    #Based on the best values reported in:
+    #On Network Embedding for Machine Learning on Road Networks: 
+    # A Case Study on the Danish Road Network
     model = Node2Vec(
         data.edge_index,
-        embedding_dim=128,
-        walk_length=20,
-        context_size=10,
+        embedding_dim=64,
+        walk_length=80,
+        context_size=15,
         walks_per_node=10,
-        num_negative_samples=1,
-        p=1,
-        q=1,
+        num_negative_samples=2,
+        p=2,
+        q=0.25,
         sparse=True,
     ).to(device)
 
@@ -108,12 +111,11 @@ if __name__ == "__main__":
     optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
 
     for epoch in range(1, 101):
-        loss = train(loader, optimizer, device)
-        acc = test()
+        loss = train(model, loader, optimizer, device)
+        print(f"Loss: {loss:.4f}")
+        acc = test(model, data)
         print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Acc: {acc:.4f}')
     
-
-
     # colors = [
     #     '#ffc0cb', '#bada55', '#008080', '#420420', '#7fe5f0', '#065535',
     #     '#ffd700'
