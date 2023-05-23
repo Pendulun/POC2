@@ -1,5 +1,15 @@
--f https://download.pytorch.org/whl/cu118
+-f https://download.pytorch.org/whl/cpu
 torch
+-f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+torch_scatter
+-f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+pyg_lib
+-f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+torch_sparse
+-f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+torch_cluster
+-f https://data.pyg.org/whl/torch-2.0.0+cpu.html
+torch_spline_conv
 torch_geometric
 matplotlib
 seaborn
