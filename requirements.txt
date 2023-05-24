@@ -1,9 +1,7 @@
--f https://download.pytorch.org/whl/cpu
+# -f https://download.pytorch.org/whl/cu118
 torch
 -f https://data.pyg.org/whl/torch-2.0.0+cpu.html
 torch_scatter
--f https://data.pyg.org/whl/torch-2.0.0+cpu.html
-pyg_lib
 -f https://data.pyg.org/whl/torch-2.0.0+cpu.html
 torch_sparse
 -f https://data.pyg.org/whl/torch-2.0.0+cpu.html
@@ -15,3 +13,4 @@ matplotlib
 seaborn
 tqdm
 osmnx
+scikit-learn
