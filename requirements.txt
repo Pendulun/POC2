@@ -14,3 +14,4 @@ seaborn
 tqdm
 osmnx
 scikit-learn
+jupyterlab
