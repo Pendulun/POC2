@@ -7,10 +7,10 @@ class ModelWrapper(ABC):
     """
     This is a torch.nn.Module wrapper
     """
-    def __init__(self, base_params:dict):
+    def __init__(self, base_params:dict, device:str):
         self._base_params = base_params
         self._final_train_loss = None
-        self._model = self._construct_model(self._base_params)
+        self._model = self._construct_model(self._base_params, device)
     
     @abstractmethod
     def train(self, loader:DataLoader, optimizer:Optimizer,
@@ -18,7 +18,7 @@ class ModelWrapper(ABC):
         pass
     
     @abstractmethod
-    def _construct_model(self, base_params:dict) -> Module:
+    def _construct_model(self, base_params:dict, device:str) -> Module:
         pass
 
     def get_specific_loader(self, batch_size:int=128, 

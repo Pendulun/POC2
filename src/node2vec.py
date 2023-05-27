@@ -21,11 +21,11 @@ class Node2VecModelWrapper(ModelWrapper):
     """
     This is the Node2Vec PyGeometric model wrapper
     """
-    def __init__(self, base_params:dict):
-        super().__init__(base_params)
+    def __init__(self, base_params:dict, device:str):
+        super().__init__(base_params, device)
 
-    def _construct_model(self, base_params:dict) -> Node2Vec:
-        return Node2Vec(**base_params)
+    def _construct_model(self, base_params:dict, device:str) -> Node2Vec:
+        return Node2Vec(**base_params).to(device)
     
     def get_specific_loader(self, batch_size:int=128, 
                             shuffle:bool=True) -> DataLoader:

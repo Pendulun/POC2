@@ -98,7 +98,7 @@ class GraphsEmbedder():
                                 model_params:dict
                                 ) -> Tuple[torch.nn.Module, float]:
         
-        model_wrapper = model_wrapper_class(model_params)
+        model_wrapper = model_wrapper_class(model_params, device)
         loader = None
         specific_loader = model_wrapper.get_specific_loader(batch_size = 128, 
                                                         shuffle = True)
@@ -112,7 +112,7 @@ class GraphsEmbedder():
         criterion = None
 
         #Maybe this is common to all models.
-        optimizer = torch.optim.SparseAdam(list(model_wrapper.model.parameters()), lr=0.01)
+        optimizer = torch.optim.SparseAdam(model_wrapper.model.parameters(), lr=0.01)
 
         model_wrapper.train(loader, optimizer, criterion, epochs, device)
         trained_model = model_wrapper.model
