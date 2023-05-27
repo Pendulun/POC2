@@ -1,147 +1,143 @@
+from __future__ import annotations
 import pathlib
-from torch_geometric.nn import Node2Vec
-from torch_geometric.data import Data
-from torch_geometric import seed_everything
+
+from data_loader import IdBasedGraphDataLoader
+from model_wrappers import ModelWrapper
+from graph_embedder import GraphsEmbedder
+
 import torch
-import osmnx
-import networkx as nx
-import numpy as np
+from torch.nn import Module
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from torch_geometric.nn import Node2Vec
+from torch_geometric import seed_everything
+
+
 import matplotlib.pyplot as plt
-from tqdm import tqdm
+import numpy as np
 from sklearn.manifold import TSNE
 
-def edge_list_coo_format(city, city_stats):
+class Node2VecModelWrapper(ModelWrapper):
     """
-    Not used. Its a slower version of edge_list_coo_format_using_scipy
+    This is the Node2Vec PyGeometric model wrapper
     """
-    graph_edge_index = np.empty((city_stats['m'], 2))
-    node_map = dict()
-    for edge_idx, line in enumerate(nx.generate_edgelist(city, data=False)):
-        origin_node_id, dest_node_id = line.split(" ")
-        origin_node_id = int(origin_node_id)
-        dest_node_id = int(dest_node_id)
+    def __init__(self, base_params:dict):
+        super().__init__(base_params)
 
-        mapped_origin_node_id = node_map.setdefault(origin_node_id, len(node_map))
-        mapped_dest_node_id = node_map.setdefault(dest_node_id, len(node_map))
-        graph_edge_index[edge_idx][0] = mapped_origin_node_id
-        graph_edge_index[edge_idx][1] = mapped_dest_node_id
+    def _construct_model(self, base_params:dict) -> Node2Vec:
+        return Node2Vec(**base_params)
     
-    graph_edge_index = graph_edge_index.T
-
-    return graph_edge_index,node_map
-
-#Based on https://stackoverflow.com/a/50665264
-def edge_list_coo_format_using_scipy(city) -> torch.Tensor:
-    coo_style = nx.to_scipy_sparse_array(city, format='coo')
-    indices = np.vstack((coo_style.row, coo_style.col))
-    return torch.from_numpy(indices).type(torch.IntTensor)
-
-#From https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
-# and https://colab.research.google.com/github/AntonioLonga/PytorchGeometricTutorial/blob/main/Tutorial11/Tutorial11.ipynb
-def train(model, loader, optimizer, device):
-    model.train()
-    total_loss = 0
-    for pos_rw, neg_rw in loader:
-        optimizer.zero_grad()
-        loss = model.loss(pos_rw.to(device), neg_rw.to(device))
-        loss.backward()
-        optimizer.step()
-        total_loss += loss.item()
-    return total_loss / len(loader)
-
-#Preciso testar oq? Não tenho divisão de treino e teste
-def test(model:Node2Vec, data):
-    model.eval()
-    with torch.inference_mode():
-        z = model()
-        acc = model.test(z[data.train_mask], data.y[data.train_mask],
-                            z[data.test_mask], data.y[data.test_mask],
-                            max_iter=150)
-    return acc
-
-def get_graph_embedding(model:Node2Vec, data:Data, device:str):
-    """
-    Returns the mean of the nodes embeddings
-    """
-    with torch.inference_mode():
-        #z row represents a node
-        z = model(torch.arange(data.num_nodes, device=device))
-        # print(z)
-        print(z.size())
-        print(type(z))
-        #Now, each col represents a node
-        z = z.T
-        mean = torch.mean(z, 1).to('cpu')
-        print(f"Mean Size: {mean.size()}")
-        return mean
-
-def get_num_nodes_of(city):
-    city_stats = osmnx.stats.basic_stats(city)
-    n_nodes = city_stats['n']
-    return n_nodes
+    def get_specific_loader(self, batch_size:int=128, 
+                            shuffle:bool=True) -> DataLoader:
+        return self.model.loader(batch_size=batch_size,
+                                  shuffle=shuffle)
+    
+    def train(self, loader:DataLoader, optimizer:Optimizer,
+              criterion:Module, epochs:int, device:str):
+        """
+        Trains the Node2Vec model saving the final_train_loss.
+        The criterion param is ignored as Node2Vec has its own
+        """
+        for epoch in range(epochs):
+            loss = self._model_train(loader, optimizer, device)
+            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
+            self._final_train_loss = loss
+    
+    #From https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
+    # and https://colab.research.google.com/github/AntonioLonga/PytorchGeometricTutorial/blob/main/Tutorial11/Tutorial11.ipynb
+    def _model_train(self, loader:DataLoader, optimizer:Optimizer, 
+                     device:str) -> float:
+        self._model.train()
+        total_loss = 0
+        num_loaded = 0
+        for pos_rw, neg_rw in loader:
+            num_loaded+=1
+            optimizer.zero_grad()
+            loss = self._model.loss(pos_rw.to(device), neg_rw.to(device))
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+        return total_loss / len(loader)
+    
+    #Preciso testar oq? Não tenho divisão de treino e teste
+    def test(model:Node2Vec, data):
+        model.eval()
+        with torch.inference_mode():
+            z = model()
+            acc = model.test(z[data.train_mask], data.y[data.train_mask],
+                                z[data.test_mask], data.y[data.test_mask],
+                                max_iter=150)
+        return acc
 
 def plot_embeddings(embeddings_list):
     embed_np = np.array([embed.numpy() for embed in embeddings_list])
     tsne_repr = TSNE(n_components=2, perplexity=1).fit_transform(embed_np)
     tsne_points = tsne_repr.tolist()
-    print(f"tsne_points: {tsne_points}")
+    print(f"tsne_points:\n{tsne_points}")
 
     plt.figure(figsize=(8, 8))
     x = [p[0] for p in tsne_points]
     y = [p[1] for p in tsne_points]
     plt.scatter(x, y)
-    plt.show()
+    plt.savefig("embeddings.jpg")
+    # plt.show()
 
 if __name__ == "__main__":
+    planned_cities_ids_path = pathlib.Path("../data/POC2_data/random_planned_cities_id.pkl")
+    not_planned_cities_ids_path = pathlib.Path("../data/POC2_data/random_not_planned_cities_id.pkl")
+    graphs_folder = pathlib.Path("../data/graphml/dataverse_files")
+
+    planned_data_loader = IdBasedGraphDataLoader.from_ids_path(graphs_folder,
+                                                               planned_cities_ids_path)
+    not_planned_data_loader = IdBasedGraphDataLoader.from_ids_path(graphs_folder,
+                                                               not_planned_cities_ids_path)
+
+    print(f"num_planned_cities: {len(planned_data_loader)}")
+    print(f"num_not_planned_cities: {len(not_planned_data_loader)}")
+
     seed_everything(42)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Running on: {device}")
 
-    GRAPH_DATA_FOLDER = pathlib.Path("../data/graphml/")
-    print(f"Data folder: {GRAPH_DATA_FOLDER}")
+    target_embeddings_folder = pathlib.Path("../data/POC2_data/graph_embeddings/node2vec/")
+    target_embeddings_folder.mkdir(exist_ok=True, parents=True)
+
+    model_wrapper_class = Node2VecModelWrapper
+
+    #Based on the best values reported in:
+    #On Network Embedding for Machine Learning on Road Networks: 
+    # A Case Study on the Danish Road Network 
+    mdl_params_without_edge_idx = {
+        'embedding_dim':64,
+        'walk_length':80,
+        'context_size':15,
+        'walks_per_node':10,
+        'num_negative_samples':2,
+        'p':2,
+        'q':0.25,
+        'sparse':True
+    }
+
+    NUM_EPOCHS = 1
+    START_IDX = 0
+    STOP_IDX = 2
+    print("STARTING PLANNED CITIES EMBEDDINGS")
+    target_base_file_name = "planned_embeddings"
+    planned_cities_embeds = GraphsEmbedder.embedd_and_save_to_folder(
+        planned_data_loader, device, target_embeddings_folder,
+        target_base_file_name, model_wrapper_class, 
+        mdl_params_without_edge_idx, start=START_IDX, 
+        stop=STOP_IDX, epochs=NUM_EPOCHS
+        )
     
-    graph_data_files = GRAPH_DATA_FOLDER.glob("*/*.graphml")
+    print("STARTING NOT PLANNED CITIES EMBEDDINGS")
+    target_base_file_name = "not_planned_embeddings"
+    not_planned_cities_embeds = GraphsEmbedder.embedd_and_save_to_folder(
+        not_planned_data_loader, device, target_embeddings_folder,
+        target_base_file_name, model_wrapper_class, 
+        mdl_params_without_edge_idx, start=START_IDX, 
+        stop=STOP_IDX, epochs=NUM_EPOCHS
+        )
 
-    embeddings_list:torch.Tensor = list()
-    for data_file in tqdm(list(graph_data_files)[:2]):
-        city = osmnx.io.load_graphml(data_file)
-        print(f"\nCity: {data_file}")
-        
-        city_edge_list = edge_list_coo_format_using_scipy(city)
-        print(city_edge_list[:15])
-        print(f"EDGE LIST MEM SIZE: {(city_edge_list.element_size() * city_edge_list.nelement())/1024} MB")
-
-        #Ver https://pytorch-geometric.readthedocs.io/en/latest/tutorial/create_dataset.html para criar um dataset
-        #https://pytorch-geometric.readthedocs.io/en/latest/get_started/introduction.html#data-handling-of-graphs
-        n_nodes = get_num_nodes_of(city)
-        print(f"num nodes: {n_nodes}")
-        data = Data(edge_index=city_edge_list, num_nodes=n_nodes)
-        data.validate(raise_on_error=True)
-
-        #Based on the best values reported in:
-        #On Network Embedding for Machine Learning on Road Networks: 
-        # A Case Study on the Danish Road Network
-        model = Node2Vec(
-            data.edge_index,
-            embedding_dim=64,
-            walk_length=80,
-            context_size=15,
-            walks_per_node=10,
-            num_negative_samples=2,
-            p=2,
-            q=0.25,
-            sparse=False,
-        ).to(device)
-
-        loader = model.loader(batch_size=128, shuffle=True)
-        optimizer = torch.optim.SparseAdam(list(model.parameters()), lr=0.01)
-
-        for epoch in range(1, 2):
-            loss = train(model, loader, optimizer, device)
-            print(f"Loss: {loss:.4f}")
-            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
-        
-        graph_emb = get_graph_embedding(model, data, device)
-        embeddings_list.append(graph_emb)
-
-    plot_embeddings(embeddings_list)
+    # planned_cities_embeds.extend(not_planned_cities_embeds)
+    # plot_embeddings(planned_cities_embeds)
