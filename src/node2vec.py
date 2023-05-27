@@ -47,6 +47,7 @@ class Node2VecModelWrapper(ModelWrapper):
     # and https://colab.research.google.com/github/AntonioLonga/PytorchGeometricTutorial/blob/main/Tutorial11/Tutorial11.ipynb
     def _model_train(self, loader:DataLoader, optimizer:Optimizer, 
                      device:str) -> float:
+        self._model.to(device)
         self._model.train()
         total_loss = 0
         num_loaded = 0
