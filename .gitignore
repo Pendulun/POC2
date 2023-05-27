@@ -1,5 +1,6 @@
 data/graphml/*/
 data/node_edge_list/*/
+data/POC2_data/sampled_cities/
 venv
 install/*
 .ipynb_checkpoints/
