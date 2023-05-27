@@ -2,7 +2,7 @@ from __future__ import annotations
 import pathlib
 
 from data_loader import IdBasedGraphDataLoader
-from model_wrappers import ModelWrapper
+from model_wrappers import ModelWrapper, EarlyStopper
 from graph_embedder import GraphsEmbedder
 
 import torch
@@ -38,10 +38,12 @@ class Node2VecModelWrapper(ModelWrapper):
         Trains the Node2Vec model saving the final_train_loss.
         The criterion param is ignored as Node2Vec has its own
         """
+        early_stopper = EarlyStopper(patience=3, min_delta=0.1)
         for epoch in range(epochs):
             loss = self._model_train(loader, optimizer, device)
-            print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}')
-            self._final_train_loss = loss
+            if early_stopper.early_stop(loss) or epoch == epochs - 1:
+                print(f'Final Epoch: {epoch:03d}, Loss: {loss:.4f}')
+                self._final_train_loss = loss
     
     #From https://github.com/pyg-team/pytorch_geometric/blob/master/examples/node2vec.py
     # and https://colab.research.google.com/github/AntonioLonga/PytorchGeometricTutorial/blob/main/Tutorial11/Tutorial11.ipynb
