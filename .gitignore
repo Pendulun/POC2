@@ -3,3 +3,4 @@ data/node_edge_list/*/
 venv
 install/*
 .ipynb_checkpoints/
+__pycache__/
