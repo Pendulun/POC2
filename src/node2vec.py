@@ -120,9 +120,9 @@ if __name__ == "__main__":
         'sparse':True
     }
 
-    NUM_EPOCHS = 1
+    NUM_EPOCHS = 15
     START_IDX = 0
-    STOP_IDX = 2
+    STOP_IDX = 150
     print("STARTING PLANNED CITIES EMBEDDINGS")
     target_base_file_name = "planned_embeddings"
     planned_cities_embeds = GraphsEmbedder.embedd_and_save_to_folder(

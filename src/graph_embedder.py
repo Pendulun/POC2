@@ -22,7 +22,8 @@ class GraphsEmbedder():
                               target_base_file_name:pathlib.Path,
                               model_wrapper_class:type[ModelWrapper], 
                               model_params_without_edge_idx:dict,
-                              start:int=0, stop:int=None, epochs:int=15):
+                              start:int=0, stop:int=None, epochs:int=15, 
+                              save_every:int=5):
         """
         Compute embeddings based on the model_wrapper. Save the embeddins and final losses
         for each graph at the target folder.
@@ -30,20 +31,25 @@ class GraphsEmbedder():
         """
         if stop == None:
             stop = len(data_loader)
-    
-        cities_embeddings, losses = GraphsEmbedder.embedd_graphs(
-            data_loader, device, model_wrapper_class, model_params_without_edge_idx,
-            start, stop, epochs
-            )
-        
-        if len(cities_embeddings) > 0:
-            print(f"CITIES LOSSES:\n{losses}")
-            GraphsEmbedder._save_embedd_and_losses_to_file(
-                target_embeddings_folder,  target_base_file_name, 
-                cities_embeddings, losses
+
+        all_embeddings = list()
+        for starting_city_idx in tqdm(range(start, stop, save_every), desc='outer'):
+            curr_stop = starting_city_idx + save_every
+
+            curr_embeddings, losses = GraphsEmbedder.embedd_graphs(
+                data_loader, device, model_wrapper_class, model_params_without_edge_idx,
+                starting_city_idx, curr_stop, epochs
                 )
-        
-        return cities_embeddings
+            
+            if len(curr_embeddings) > 0:
+                print(f"CITIES LOSSES:\n{losses}")
+                GraphsEmbedder._save_embedd_and_losses_to_file(
+                    target_embeddings_folder,  target_base_file_name, 
+                    curr_embeddings, losses
+                    )
+            all_embeddings.extend(curr_embeddings)
+
+        return all_embeddings
     
     @classmethod
     def _save_embedd_and_losses_to_file(cls, target_folder:pathlib.Path, target_file_name:str, 
@@ -72,7 +78,10 @@ class GraphsEmbedder():
         
         embeddings_list:list[torch.Tensor] = list()
         losses:list[float] = list()
-        for city_idx, city_graph in enumerate(tqdm(data_loader[start:stop], total=stop-start)):
+        for city_idx, city_graph in enumerate(
+            tqdm(data_loader[start:stop], 
+                 total=stop-start, 
+                 desc="inner")):
             real_city_idx = city_idx + start
             print(f"City idx: {real_city_idx}")
             # city_graph = osmnx.io.load_graphml(city_graph_path)
