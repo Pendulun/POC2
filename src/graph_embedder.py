@@ -45,7 +45,7 @@ class GraphsEmbedder():
                 print(f"CITIES LOSSES:\n{losses}")
                 GraphsEmbedder._save_embedd_and_losses_to_file(
                     target_embeddings_folder,  target_base_file_name, 
-                    curr_embeddings, losses
+                    curr_embeddings, losses, starting_city_idx, curr_stop
                     )
             all_embeddings.extend(curr_embeddings)
 
@@ -53,12 +53,14 @@ class GraphsEmbedder():
     
     @classmethod
     def _save_embedd_and_losses_to_file(cls, target_folder:pathlib.Path, target_file_name:str, 
-                                   embeddings:list, losses:list[float]):
+                                   embeddings:list, losses:list[float],
+                                   start_idx:int, stop_idx:int):
         timestr = time.strftime("%Y%m%d-%H%M%S")
-        target_planned_embeddings_file = target_folder / f"{target_file_name}_{timestr}.pt"
+        planned_embeddings_file_name = f"{target_file_name}_{start_idx}_{stop_idx}_{timestr}.pt"
+        target_planned_embeddings_file = target_folder / planned_embeddings_file_name
         torch.save(embeddings, target_planned_embeddings_file)
 
-        target_losses_file = target_folder / f"losses_{timestr}.pkl"
+        target_losses_file = target_folder / f"losses_{start_idx}_{stop_idx}_{timestr}.pkl"
         with open(target_losses_file, 'wb') as losses_file:
             pickle.dump(losses, losses_file)
 
