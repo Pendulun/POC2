@@ -34,6 +34,7 @@ class GraphsEmbedder():
 
         all_embeddings = list()
         for starting_city_idx in tqdm(range(start, stop, save_every), desc='outer'):
+            print("\n")
             curr_stop = starting_city_idx + save_every
 
             curr_embeddings, losses = GraphsEmbedder.embedd_graphs(
@@ -85,7 +86,7 @@ class GraphsEmbedder():
                  total=stop-start, 
                  desc="inner")):
             real_city_idx = city_idx + start
-            print(f"City idx: {real_city_idx}")
+            print(f"\nCity idx: {real_city_idx}\n")
             # city_graph = osmnx.io.load_graphml(city_graph_path)
             city_edge_list, n_nodes = GraphsEmbedder._get_city_edge_list_and_num_nodes(city_graph)
             data = Data(edge_index=city_edge_list, num_nodes=n_nodes)
