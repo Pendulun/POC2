@@ -35,7 +35,10 @@ class GraphsEmbedder():
         all_embeddings = list()
         for starting_city_idx in tqdm(range(start, stop, save_every), desc='outer'):
             print("\n")
-            curr_stop = starting_city_idx + save_every
+            if starting_city_idx + save_every >= stop:
+                curr_stop = stop
+            else:
+                curr_stop = starting_city_idx + save_every
 
             curr_embeddings, losses = GraphsEmbedder.embedd_graphs(
                 data_loader, device, model_wrapper_class, model_params_without_edge_idx,
