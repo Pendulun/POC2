@@ -6,7 +6,7 @@ import pickle
 import torch
 import time
 from tqdm import tqdm
-from typing import Tuple
+from typing import Tuple, Callable
 
 from torch_geometric.data import Data
 import osmnx
@@ -22,6 +22,7 @@ class GraphsEmbedder():
                               target_base_file_name:pathlib.Path,
                               model_wrapper_class:type[ModelWrapper], 
                               model_params_without_edge_idx:dict,
+                              params_adapter_func:Callable=None,
                               start:int=0, stop:int=None, epochs:int=15, 
                               save_every:int=5):
         """
@@ -42,7 +43,7 @@ class GraphsEmbedder():
 
             curr_embeddings, losses = GraphsEmbedder.embedd_graphs(
                 data_loader, device, model_wrapper_class, model_params_without_edge_idx,
-                starting_city_idx, curr_stop, epochs
+                params_adapter_func, starting_city_idx, curr_stop, epochs
                 )
             
             if len(curr_embeddings) > 0:
@@ -72,6 +73,7 @@ class GraphsEmbedder():
     def embedd_graphs(cls, data_loader:IdBasedGraphDataLoader, device:str, 
                   model_wrapper_class:type[ModelWrapper], 
                   model_params_without_edge_idx:dict,
+                  params_adapter_func:Callable=None,
                   start:int=0, stop:int=None, epochs:int=15) -> Tuple[list[torch.Tensor], list[float]]:
         """
         Embedds the graphs in the data_loader.
@@ -97,9 +99,13 @@ class GraphsEmbedder():
 
             model_params_without_edge_idx['edge_index'] = data.edge_index
 
+            final_params = model_params_without_edge_idx
+            if params_adapter_func is not None:
+                final_params = params_adapter_func(model_params_without_edge_idx, n_nodes)
+
             model, final_loss = GraphsEmbedder._get_trained_model_on_data(device, epochs, 
                                                         data, model_wrapper_class,
-                                                        model_params_without_edge_idx
+                                                        final_params
                                                         )
             losses.append(final_loss)
             graph_emb = GraphsEmbedder._get_graph_embedding(model, data, device)
