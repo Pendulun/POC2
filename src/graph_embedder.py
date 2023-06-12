@@ -97,12 +97,11 @@ class GraphsEmbedder():
             data = Data(edge_index=city_edge_list, num_nodes=n_nodes)
             data.validate(raise_on_error=True)
 
-            model_params_without_edge_idx['edge_index'] = data.edge_index
-
             final_params = model_params_without_edge_idx
             if params_adapter_func is not None:
                 final_params = params_adapter_func(model_params_without_edge_idx, n_nodes)
 
+            final_params['edge_index'] = data.edge_index
             model, final_loss = GraphsEmbedder._get_trained_model_on_data(device, epochs, 
                                                         data, model_wrapper_class,
                                                         final_params
