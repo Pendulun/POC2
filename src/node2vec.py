@@ -109,7 +109,7 @@ if __name__ == "__main__":
     #Based on the best values reported in:
     #On Network Embedding for Machine Learning on Road Networks: 
     # A Case Study on the Danish Road Network 
-    mdl_params_without_edge_idx = {
+    base_mdl_params_without_edge_idx = {
         'embedding_dim':64,
         'walk_length':80,
         'context_size':15,
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     planned_cities_embeds = GraphsEmbedder.embedd_and_save_to_folder(
         planned_data_loader, device, target_embeddings_folder,
         target_base_file_name, model_wrapper_class, 
-        mdl_params_without_edge_idx, start=START_IDX, 
+        base_mdl_params_without_edge_idx, start=START_IDX, 
         stop=STOP_IDX, epochs=NUM_EPOCHS
         )
     
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     not_planned_cities_embeds = GraphsEmbedder.embedd_and_save_to_folder(
         not_planned_data_loader, device, target_embeddings_folder,
         target_base_file_name, model_wrapper_class, 
-        mdl_params_without_edge_idx, start=START_IDX, 
+        base_mdl_params_without_edge_idx, start=START_IDX, 
         stop=STOP_IDX, epochs=NUM_EPOCHS
         )
 

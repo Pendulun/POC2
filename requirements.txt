@@ -15,3 +15,5 @@ tqdm
 osmnx
 scikit-learn
 jupyterlab
+lightgbm
+shap
